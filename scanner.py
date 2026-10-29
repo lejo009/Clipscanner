@@ -1,4 +1,3 @@
-
 import getpass
 import json
 import os
@@ -10,10 +9,22 @@ from zoneinfo import ZoneInfo
 import requests
 
 # ---------------- Einstellungen ----------------
-STREAMERS = ["zarbex", "hamedloco", "trymacs", "marcoscm", "montanablack88"]
-WINDOW_MIN = 10      # Zeitfenster: so viele Minuten zaehlen wir Clips
-MIN_CLIPS = 5        # mindestens so viele Clips im Fenster fuer einen Alarm
-FACTOR = 3           # Alarm erst, wenn es X-mal mehr als normal ist
+STREAMERS = [
+    "zarbex",
+    "hamedloco",
+    "trymacs",
+    "marco_scm",
+    "montanablack88",
+    "alibumayetv",
+    "letshugotv",
+    "timgioh",
+    "papaplatte",
+    "honeypuu",
+    "xfibii",
+]
+WINDOW_MIN = 5       # Zeitfenster: so viele Minuten zaehlen wir Clips
+MIN_CLIPS = 3        # mindestens so viele Clips im Fenster fuer einen Alarm
+FACTOR = 0           # 0 = bei jedem Streamer einfach ab MIN_CLIPS Alarm
 CHECK_EVERY = 60     # Sekunden zwischen zwei Pruefungen (nur im Dauer-Modus)
 COOLDOWN_MIN = 20    # nach einem Alarm so lange Ruhe fuer diesen Streamer
 STATE_FILE = "state.json"
@@ -70,8 +81,14 @@ class Twitch:
             return r.json()
 
     def user_ids(self, logins):
-        data = self.get("users", [("login", l) for l in logins]).get("data", [])
-        return {u["login"].lower(): u["id"] for u in data}
+        # Twitch erlaubt nur 100 Namen pro Anfrage, deshalb in Paketen
+        logins = list(dict.fromkeys(l.lower() for l in logins))
+        ids = {}
+        for i in range(0, len(logins), 100):
+            paket = logins[i:i + 100]
+            data = self.get("users", [("login", l) for l in paket]).get("data", [])
+            ids.update({u["login"].lower(): u["id"] for u in data})
+        return ids
 
     def clips_since(self, user_id, since, max_pages=5):
         clips, cursor = [], None
